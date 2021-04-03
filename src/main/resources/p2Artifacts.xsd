@@ -1,0 +1,88 @@
+<!-- xjc.sh p2Artifacts.xsd -b p2Artifacts.xjb -d ../java-gen/ -->
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="property">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute type="xs:string" name="name" use="optional"/>
+          <xs:attribute type="xs:string" name="value" use="optional"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="rule">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute type="xs:string" name="filter" use="optional"/>
+          <xs:attribute type="xs:string" name="output" use="optional"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="step">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute type="xs:string" name="id" use="optional"/>
+          <xs:attribute type="xs:string" name="required" use="optional"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="processing">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="step"/>
+      </xs:sequence>
+      <xs:attribute type="xs:byte" name="size" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="properties">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="property" maxOccurs="unbounded" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute type="xs:byte" name="size" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="artifact">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="processing" minOccurs="0"/>
+        <xs:element ref="properties"/>
+      </xs:sequence>
+      <xs:attribute type="xs:string" name="classifier" use="optional"/>
+      <xs:attribute type="xs:string" name="id" use="optional"/>
+      <xs:attribute type="xs:string" name="version" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mappings">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="rule" maxOccurs="unbounded" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute type="xs:byte" name="size"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="artifacts">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="artifact" maxOccurs="unbounded" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute type="xs:short" name="size"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="repository">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="properties"/>
+        <xs:element ref="mappings"/>
+        <xs:element ref="artifacts"/>
+      </xs:sequence>
+      <xs:attribute type="xs:string" name="name"/>
+      <xs:attribute type="xs:string" name="type"/>
+      <xs:attribute type="xs:byte" name="version"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
