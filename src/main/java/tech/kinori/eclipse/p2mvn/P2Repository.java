@@ -9,8 +9,8 @@ import tech.kinori.eclipse.p2.Repository;
 import tech.kinori.eclipse.p2.Rule;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,14 +30,22 @@ public class P2Repository {
         this.client = client;
     }
 
-    public static void main(String... args) throws IOException {
+    public static void main(String... args) throws IOException, URISyntaxException {
         AsyncHttpClient client = Dsl.asyncHttpClient();
         P2Repository p2repo = new P2Repository(client);
+
+        // These are a params
+        String p2Url = "https://download.eclipse.org/modeling/emf/emf/builds/release/2.25";
+        final URI p2Uri = getP2Uri(p2Url);
+        final URI artifactsUri = p2Uri.resolve("artifacts.jar");
+        final Path p2mvnPath = Paths.get(System.getProperty("user.home"), "p2mvn/");
+        // Are any plugins non-SNAPSHOT? If so we need to ask both dirs
+        final String repoId = "maven-snapshots";
+        final URI repoUrl = new URI("http://172.16.46.46:8081/repository/maven-snapshots");
+
         // Search compositeArtifacts.xml, compositeArtifacts.jar, artifacts.xml, artifacts.jar
-        final String p2Url = "https://download.eclipse.org/modeling/emf/emf/builds/release/2.25/";
-        final String artifactsFile = p2Url + "artifacts.jar";
         try {
-            Repository repo = p2repo.getArtifacts(artifactsFile);
+            Repository repo = p2repo.getArtifacts(artifactsUri.toString());
             System.out.println(repo.getName());
             // Check type is simple?
             // Get the mapping for osgi-bundles
@@ -62,8 +70,7 @@ public class P2Repository {
                     ));
             System.out.println(mvnGroups);
             // For each coordinate, create the folder, pom and download jars
-            // This is a param
-            Path p2mvnPath = Paths.get(System.getProperty("user.home"), "p2mvn/");
+
             Path p = Files.createDirectories(p2mvnPath);
             System.out.println(p);
             Path p2mvnSh = p2mvnPath.resolve("deploy.sh");
@@ -74,26 +81,29 @@ public class P2Repository {
                 for (Map.Entry<MavenCoordinates, List<Artifact>> coord : mvnGroups.entrySet()) {
                     for (Artifact artfct : coord.getValue()) {
                         mappingValues.clear();
-                        mappingValues.put("repoUrl", p2Url);
+                        mappingValues.put("repoUrl", p2Uri.toString().substring(0, p2Uri.toString().length()-1)); // Remove last slash
                         mappingValues.put("id", artfct.getId());
                         mappingValues.put("version", artfct.getVersion());
-                        String jarUrl = tmplt.format(osgiMapping.getOutput(), mappingValues);
-                        //boolean isSource =
+                        URI jarUrl = new URI(tmplt.format(osgiMapping.getOutput(), mappingValues));
+                        // Download the jar
                         Path jarFile = p2repo.getJar(jarUrl, p2mvnPath);
                         // Add parameter for install or deploy
                         // Add parameter for repoid
                         // Add parameter for repourl
                         String mvnClassifier = p2repo.mvnClassifier(artfct);
-                        printWriter.printf(coord.getKey().deployCmd(mvnClassifier), coord.getKey().)
+                        if ("sources".equals(mvnClassifier)) {
+                            mvnClassifier = "java-source";
+                        }
+                        // Create a deploy entry in the script
+                        printWriter.printf(
+                            coord.getKey().deployCmd(mvnClassifier),
+                            jarFile,
+                            repoId,
+                            repoUrl);
+                        printWriter.println();
+                        // Download the sources jar
+                        // Create a deploy entry in the script for the sources
                     }
-                    // Download the jar
-
-                    // Create a deploy entry in the script
-
-                    // Download the sources jar
-                    // Create a deploy entry in the script for the sources
-
-
                 }
             }
 
@@ -108,6 +118,14 @@ public class P2Repository {
             client.close();
         }
         System.out.println("Done");
+    }
+
+    private static URI getP2Uri(String p2Url) throws URISyntaxException {
+        // Add test to add trailing backslash
+        if (!p2Url.endsWith("/")) {
+            p2Url += "/";
+        }
+        return new URI(p2Url);
     }
 
     /**
@@ -142,7 +160,7 @@ public class P2Repository {
                 .filter(p -> "maven-artifactId".equals(p.getName()))
                 .map(Property::getPropertyValue)
                 .findFirst()
-                .orElseGet(() -> "unkown");
+                .orElseGet(() -> "unknown");
     }
 
     private String version(Artifact artifact) {
@@ -161,11 +179,13 @@ public class P2Repository {
                 .orElseGet(() -> "jar");
     }
 
-    public Path getJar(String jarUrl, Path destination) throws IOException, ExecutionException, InterruptedException {
-        Path jarFile = destination.resolve(Paths.get(jarUrl).getFileName());
+    public Path getJar(URI jarUrl, Path destination) throws IOException, ExecutionException, InterruptedException {
+        String path = jarUrl.getPath();
+        String jarname = path.substring(path.lastIndexOf('/') + 1);
+        Path jarFile = destination.resolve(jarname);
         FileOutputStream stream = new FileOutputStream(jarFile.toString());
         System.out.println(jarFile.toString());
-        BoundRequestBuilder getRequest = client.prepareGet(jarUrl).setFollowRedirect(true);
+        BoundRequestBuilder getRequest = client.prepareGet(jarUrl.toString()).setFollowRedirect(true);
         Response response = getRequest.execute(new AsyncCompletionHandler<Response>() {
 
             @Override
