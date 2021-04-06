@@ -6,10 +6,6 @@ import me.tongfei.progressbar.ColorPBR;
 import me.tongfei.progressbar.ConsoleProgressBarConsumer;
 import me.tongfei.progressbar.ProgressBar;
 import org.asynchttpclient.*;
-import tech.kinori.eclipse.p2.Artifact;
-import tech.kinori.eclipse.p2.Property;
-import tech.kinori.eclipse.p2.Repository;
-import tech.kinori.eclipse.p2.Rule;
 
 import java.io.*;
 import java.net.URI;
@@ -25,40 +21,16 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class P2Repository {
+public class Temp {
 
-    public enum Mode {
-        LOCAL("l"),
-        DEPLOY("d"),
-        INVALID("");
 
-        private final String param;
-
-        Mode(String param) {
-            this.param = param;
-        }
-
-        public static Mode fromParam(String param) {
-            switch (param) {
-                case "":
-                case "l":
-                case "L":
-                    return LOCAL;
-                case "d":
-                case "D":
-                    return DEPLOY;
-                default:
-                    return INVALID;
-            }
-        }
-    }
 
     public enum Type {
         COMPOSITE_JAR("compositeArtifacts.jar"),
         COMPOSITE("compositeArtifacts.xml"),
         SINGLE_JAR("artifacts.jar"),
         SINGLE("artifacts.xml");
-        
+
         private final String fragment;
 
         public String fragment() {
@@ -70,7 +42,7 @@ public class P2Repository {
         }
     }
 
-    public P2Repository(
+    public Temp(
         String p2Url,
         Path p2mvnPath,
         String repoId,
@@ -160,7 +132,7 @@ public class P2Repository {
         final URI repoUrl = new URI("http://172.16.46.46:8081/repository/maven-snapshots");
 
 
-        P2Repository p2repo = new P2Repository(p2Url, p2mvnPath, repoId, repoUrl.toString(), client);
+        Temp p2repo = new Temp(p2Url, p2mvnPath, repoId, repoUrl.toString(), client);
 
 
         final URI artifactsUri = p2Uri.resolve("artifacts.jar");

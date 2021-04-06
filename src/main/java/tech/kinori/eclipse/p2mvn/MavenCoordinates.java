@@ -35,9 +35,23 @@ public class MavenCoordinates {
 		return builder.toString();
 	}
 
-	public String installCmd(boolean source) {
+	public String installCmd(String packaging) {
+		StringBuilder builder = new StringBuilder();
+		builder.append("mvn install:install-file -DgroupId=");
+		builder.append(this.groupId);
+		builder.append(" -DartifactId=");
+		builder.append(this.artifactId);
+		builder.append(" -Dversion=");
+		builder.append(this.version);
+		builder.append(" -Dpackaging=");
+		builder.append(packaging);
+		builder.append(" -Dfile=%s");
 		//mvn install:install-file -Dfile=<path-to-file> -DgroupId=<group-id> -DartifactId=<artifact-id> -Dversion=<version> -Dpackaging=<packaging>
-		return "";
+		return builder.toString();
+	}
+
+	public String groupId() {
+		return this.groupId;
 	}
 
 
@@ -62,7 +76,9 @@ public class MavenCoordinates {
 		return Objects.hash(groupId, artifactId, version);
 	}
 
-	private final String groupId;
+
+
+    private final String groupId;
 	private final String artifactId;
 	private final String version;
 

@@ -3,6 +3,8 @@ package tech.kinori.eclipse.p2mvn
 import com.diogonunes.jcolor.Ansi.colorize
 import com.diogonunes.jcolor.Attribute.*
 import org.asynchttpclient.Dsl
+import tech.kinori.eclipse.p2mvn.p2.Repository
+import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
@@ -25,7 +27,7 @@ fun main(args: Array<String>) {
     // Get the home dir
     val p2mvnFolder = Paths.get(System.getProperty("user.home"), "p2mvn")
     var info = colorize(p2mvnFolder.toString(), YELLOW_TEXT())
-    println("Downloaded jars and maven script will be stored in folder: $info")
+    println("Downloaded jars and maven scripts (per group id) will be stored in folder: $info")
     val line = colorize("-".repeat(100))
     println(line)
     println()
@@ -35,16 +37,16 @@ fun main(args: Array<String>) {
 
     askInput("What p2 repository are you exporting to maven?")
     val p2Url = readLine()
-    var mode = P2Repository.Mode.INVALID
+    var mode = Mode.INVALID
     askInput("Do you want to install local (l) or deploy (d) the p2 jars?", "(L/d)")
-    mode = P2Repository.Mode.fromParam(readLine())
-    while (mode == P2Repository.Mode.INVALID) {
+    mode = Mode.fromParam(readLine())
+    while (mode == Mode.INVALID) {
         askInput("You must chose install local (l) or deploy (d)", "(L/d)")
-        mode = P2Repository.Mode.fromParam(readLine())
+        mode = Mode.fromParam(readLine())
     }
     var repoUrl: String? = null
     var repoId: String? = null
-    if (mode == P2Repository.Mode.DEPLOY) {
+    if (mode == Mode.DEPLOY) {
         askInput("What is the maven repository url (must accept snapshot versions)")
         repoUrl = readLine()
         askInput("What is the maven repository id (as defined in the .m2 settings)")
@@ -52,40 +54,45 @@ fun main(args: Array<String>) {
     }
     val client = Dsl.asyncHttpClient()
 
-    var p2repo = P2Repository(p2Url, p2mvnFolder, repoId, repoUrl, client)
+    var inspector = Inspector(p2Url, p2mvnFolder, repoId, repoUrl, client)
     var getInfo = true;
+    var download = false;
+    var repo: Repository? = null;
     while (getInfo) {
         try {
-            val type = p2repo.analyze()
-            when (type) {
-                P2Repository.Type.COMPOSITE_JAR, P2Repository.Type.COMPOSITE -> println(colorize("p2 repo is composite", CYAN_TEXT()))
-                P2Repository.Type.SINGLE_JAR, P2Repository.Type.SINGLE -> println(colorize("p2 repo is single", CYAN_TEXT()))
+            repo = inspector.analyze()
+            if (repo.isComposite) {
+                println(colorize("Found composite p2 repository", CYAN_TEXT()))
+                askInput("${repo.size()} repositories will be processed, continue", "y/N")
+                var cont = readLine()
+                download =  "y".equals(cont) || "Y".equals(cont)
+            } else {
+                println(colorize("Found single p2 repository", CYAN_TEXT()))
+                download = true;
             }
-            getInfo = true
+            getInfo = false
         } catch (e1: IllegalArgumentException) {
             // Check url
             showError(e1.message);
             client.close();
             exitProcess(1);
-        } catch (e2: IllegalStateException) {
+        } catch (e2: IllegalArgumentException) {
             showWarn(e2.message);
             askInput("Unable to connect to repository, try again", "y/N")
             var again = readLine()
             getInfo = "y".equals(again) || "Y".equals(again)
         }
     }
-
+    if (repo != null && download) {
+        // For each coordinate, create the folder, pom and download jars
+        Files.createDirectories(p2mvnFolder)
+        showProgress("Downloading p2 repository jars.")
+        repo.process(client, p2mvnFolder, mode, repoId, repoUrl)
+    }
     client.close();
-    showProgress("maven script created successfully.")
+    showProgress("maven scripts created successfully.")
 }
 
-fun handleComposite() {
-
-}
-
-fun handleSingle() {
-
-}
 
 fun askInput(text: String, options: String = "") {
     val entry = colorize(text, MAGENTA_TEXT())
@@ -95,15 +102,15 @@ fun askInput(text: String, options: String = "") {
 
 fun showProgress(text: String?) {
     val entry = colorize(text, GREEN_TEXT())
-    print("$entry")
+    println("$entry")
 }
 
 fun showError(text: String?) {
     val entry = colorize(text, RED_TEXT(), BOLD())
-    print("$err $entry")
+    println("$err $entry")
 }
 
 fun showWarn(text: String?) {
     val entry = colorize(text, YELLOW_TEXT(), BOLD())
-    print("$warn $entry")
+    println("$warn $entry")
 }

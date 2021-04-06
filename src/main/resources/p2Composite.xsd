@@ -1,4 +1,4 @@
-<!-- xjc.sh p2Composite.xsd -d ../java-gen/ -->
+<!-- xjc.sh p2Composite.xsd -b p2Composite.xjb -d ../java-gen/ -->
 <xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:element name="property">
         <xs:complexType>
