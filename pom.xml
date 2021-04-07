@@ -6,7 +6,7 @@
 
     <groupId>tech.kinori</groupId>
     <artifactId>p2mvn</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <properties>
         <maven.compiler.source>14</maven.compiler.source>
@@ -204,9 +204,7 @@
                             </classPath>
                             <jre>
                                 <minVersion>14</minVersion>
-                                <opts>
-                                    <opt>-Djava.endorsed.dirs=./endorsed</opt>
-                                </opts>
+                                <path>%JAVA_HOME%;%PATH%</path>
                             </jre>
                             <versionInfo>
                                 <fileVersion>1.0.0.0</fileVersion>
