@@ -26,4 +26,6 @@ The tool downloads the p2 repository jars to the `<user.home>\p2mvn`, grouping t
 group id creates either an `install.(bat/sh)` or `deploy.(bat/sh)` that can be executed to install/deploy the downloaded
 jars to a maven repository.
 
+**Note** that for public maven repositories, p2 jars are marked as maven "SNAPSHOT" versions by default, and hence you 
+can not push them to "maven central"; you will need to push to sonatype or another repository that accepts snapshots. 
 
