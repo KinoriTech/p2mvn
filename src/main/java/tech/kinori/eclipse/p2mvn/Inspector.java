@@ -213,7 +213,7 @@ public class Inspector {
         extractArchive(tempFile, dir);
         // Find xml
         File[] files = dir.toFile().listFiles(
-            (dir1, name) -> name.startsWith("artifacts") && name.endsWith(".xml"));
+            (dir1, name) -> name.toLowerCase().contains("artifacts") && name.endsWith(".xml"));
         // System.out.println(files[0]);
         repoXML = files[0];
         return repoXML;

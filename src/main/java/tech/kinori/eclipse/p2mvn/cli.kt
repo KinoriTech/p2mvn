@@ -34,7 +34,7 @@ fun main(args: Array<String>) {
     println()
     println(line)
 
-    message.askInput("What p2 repository are you exporting to maven?")
+    message.askInput("What p2 repository are you exporting to maven")
     val p2Url = readLine()
     var mode = Mode.INVALID
     message.askInput("Do you want to install locally (l) or deploy (d) the p2 jars?", "(L/d)")
@@ -62,8 +62,11 @@ fun main(args: Array<String>) {
             if (repo.isComposite) {
                 message.showInfo("Found composite p2 repository")
                 message.askInput("${repo.size()} repositories will be processed, continue", "y/N")
-                var cont = readLine()
-                download =  "y".equals(cont) || "Y".equals(cont)
+                var accept = readLine()
+                if ("" == accept) {
+                    accept = "y"
+                }
+                download =  "y" == accept || "Y" == accept
             } else {
                 message.showInfo("Found single p2 repository")
                 download = true;
@@ -77,14 +80,16 @@ fun main(args: Array<String>) {
         } catch (e2: P2Exception) {
             e2.message?.let { message.showWarn(it) };
             message.askInput("Unable to connect to repository, try again", "y/N")
-            var again = readLine()
-            getInfo = "y".equals(again) || "Y".equals(again)
+            var accept = readLine()
+            if ("".equals(accept)) {
+                accept = "y"
+            }
+            getInfo = "y" == accept || "Y" == accept
         }
     }
     if (repo != null && download) {
         try {
             Files.createDirectories(p2mvnFolder)
-            message.showProgress("Downloading p2 repository jars.")
             repo.process(client, p2mvnFolder, mode, repoId, repoUrl)
         } catch (e2: P2Exception) {
             e2.message?.let { message.showError(it) };

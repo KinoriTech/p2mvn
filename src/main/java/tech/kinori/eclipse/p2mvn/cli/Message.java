@@ -18,7 +18,7 @@ public class Message {
     public void  askInput(@NotNull String text, @NotNull String options) {
         String entry = colorize(text, MAGENTA_TEXT());
         String choices = colorize(options, YELLOW_TEXT());
-        System.out.print(String.format("%s %s %s", prompt, entry, choices));
+        System.out.print(String.format("%s %s %s ", prompt, entry, choices));
     }
 
     public void  showProgress(@NotNull String text) {

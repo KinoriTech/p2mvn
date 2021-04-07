@@ -78,6 +78,7 @@ public class SingleP2 implements Repository {
         @NotNull Mode mode,
         @Nullable String repoId,
         @Nullable String repoUrl) throws P2Exception {
+        message.showProgress("Downloading p2 repository jars.");
         this.purgeDirectory(p2mvnFolder.toFile());
         this.message.showInfo(String.format("Processing %d artifacts in the %s metadata", this.size(), this.uri));
         // Get the mapping for osgi-bundles
