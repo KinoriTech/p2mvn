@@ -1,13 +1,12 @@
 # This workflow will build a Java project with Maven
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
 
-name: Build and Stage
+name: Build and Release
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - 'v*.*.*'
 
 jobs:
   build:
@@ -23,9 +22,10 @@ jobs:
         distribution: 'zulu'
     - name: Build with Maven
       run: mvn -B package --file pom.xml
-    - name: Stage
-      run: mkdir staging && cp target/*.zip staging
-    - uses: actions/upload-artifact@v2
+    - name: GH Release
+      uses: softprops/action-gh-release@v0.1.5
+      if: startsWith(github.ref, 'refs/tags/')
       with:
-        name: Package
-        path: staging
+        files: target/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
