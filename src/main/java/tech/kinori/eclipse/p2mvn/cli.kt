@@ -13,7 +13,7 @@ import kotlin.system.exitProcess
 
 val message = Message()
 
-fun main(args: Array<String>) {
+fun main() {
     println("\n" +
             "         ____                                 \n" +
             "    _ __|___ \\    /\\/\\   __ ___   _____ _ __  \n" +
@@ -36,9 +36,8 @@ fun main(args: Array<String>) {
 
     message.askInput("What p2 repository are you exporting to maven")
     val p2Url = readLine()
-    var mode = Mode.INVALID
     message.askInput("Do you want to install locally (l) or deploy (d) the p2 jars?", "(L/d)")
-    mode = Mode.fromParam(readLine())
+    var mode = Mode.fromParam(readLine())
     while (mode == Mode.INVALID) {
         message.askInput("You must chose install local (l) or deploy (d)", "(L/d)")
         mode = Mode.fromParam(readLine())
