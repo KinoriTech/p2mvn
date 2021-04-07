@@ -2,16 +2,13 @@ package tech.kinori.eclipse.p2mvn;
 
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
-import me.tongfei.progressbar.ColorPBR;
-import me.tongfei.progressbar.ConsoleProgressBarConsumer;
 import me.tongfei.progressbar.ProgressBar;
+import me.tongfei.progressbar.ProgressBarStyle;
 import org.asynchttpclient.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.kinori.eclipse.p2.composite.Composite;
-import tech.kinori.eclipse.p2.single.Artifact;
-import tech.kinori.eclipse.p2.single.Property;
 import tech.kinori.eclipse.p2.single.Single;
 import tech.kinori.eclipse.p2mvn.p2.CompositeP2;
 import tech.kinori.eclipse.p2mvn.p2.Repository;
@@ -22,14 +19,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 public class Inspector {
@@ -55,47 +50,32 @@ public class Inspector {
 
     public Inspector(
         String p2Url,
-        Path p2mvnPath,
-        String repoId,
-        String repoUrl,
         AsyncHttpClient client) {
         this.p2Url = p2Url;
-        this.p2mvnPath = p2mvnPath;
-        this.repoId = repoId;
-        this.repoUrl = repoUrl;
-        this.deploy = this.repoId == null || this.repoUrl == null;
         this.client = client;
     }
 
     private final AsyncHttpClient client;
     private final String p2Url;
-    private final Path p2mvnPath;
-    private final String repoId;
-    private final String repoUrl;
-    private final boolean deploy;
 
+    public Repository analyze() throws P2Exception {
+        return this.analyze(false);
+    }
     /**
      * Determine the p2 repository type
      * @return
      */
-    public Repository analyze() throws P2Exception {
+    public Repository analyze(boolean nested) throws P2Exception {
         final URI p2Uri = getP2Uri();
         EnumSet<Type> targets = EnumSet.allOf(Type.class);
         Repository result = null;
         int step = 100 / targets.size();
-        try (ProgressBar pb = new ProgressBar(
-                "Analyze",
-               100,
-                1000,
-                0L,
-                Duration.ZERO,
-                new ColorPBR(),
-                new ConsoleProgressBarConsumer(System.out)
-                )
+        try (ProgressBar pb = new ProgressBar("Analyze",100,1000, System.out,
+                ProgressBarStyle.COLORFUL_UNICODE_BLOCK, "",1, false, null,
+                ChronoUnit.SECONDS, 0L, Duration.ZERO)
             ) {
             for (Type target : targets) {
-                pb.setExtraMessage(target.fragment());
-                Optional<Repository> optRepo = getRepository(target, p2Uri);
+                Optional<Repository> optRepo = getRepository(target, p2Uri, nested);
                 if (optRepo.isPresent()) {
                     result = optRepo.get();
                     pb.stepTo(100);
@@ -129,7 +109,10 @@ public class Inspector {
 
     }
 
-    private Optional<Repository> getRepository(Type target, URI p2Uri) throws P2Exception {
+    private Optional<Repository> getRepository(
+        Type target,
+        URI p2Uri,
+        boolean nested) throws P2Exception {
         final URI artifactsUri = p2Uri.resolve(target.fragment());
         BoundRequestBuilder getRequest = client.prepareGet(artifactsUri.toString()).setFollowRedirect(true);
 
@@ -138,14 +121,11 @@ public class Inspector {
         if (response == null) { // Interrupted
             return Optional.empty();
         }
-        // System.out.println(response.getStatusCode());
         if (response.getStatusCode() != 200) {
             return Optional.empty();
         }
         File repoXML;
         if ("application/x-java-archive".equals(response.getContentType())) {
-            //System.out.println(response.getContentType());
-            //System.out.println(tempFile.toFile().getTotalSpace());
             repoXML = extractXML(tempFile);
         } else {
             repoXML = tempFile.toFile();
@@ -159,8 +139,10 @@ public class Inspector {
                 }
                 case SINGLE, SINGLE_JAR -> {
                     JAXBContext context = JAXBContext.newInstance(Single.class);
-                    return Optional.of(new SingleP2(p2Uri, (Single) context.createUnmarshaller()
-                        .unmarshal(new FileReader(repoXML))));
+                    return Optional.of(new SingleP2(
+                        p2Uri,
+                        (Single) context.createUnmarshaller().unmarshal(new FileReader(repoXML)),
+                        nested));
                 }
             }
         } catch (FileNotFoundException e) {

@@ -1,4 +1,4 @@
-package tech.kinori.eclipse.p2mvn;
+package tech.kinori.eclipse.p2mvn.maven;
 
 public enum Mode {
         LOCAL("l"),

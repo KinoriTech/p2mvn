@@ -3,7 +3,7 @@ package tech.kinori.eclipse.p2mvn.p2;
 import org.asynchttpclient.AsyncHttpClient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import tech.kinori.eclipse.p2mvn.Mode;
+import tech.kinori.eclipse.p2mvn.maven.Mode;
 import tech.kinori.eclipse.p2mvn.P2Exception;
 
 import java.nio.file.Path;

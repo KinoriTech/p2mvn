@@ -3,16 +3,15 @@ package tech.kinori.eclipse.p2mvn
 import com.diogonunes.jcolor.Ansi.colorize
 import com.diogonunes.jcolor.Attribute.*
 import org.asynchttpclient.Dsl
+import tech.kinori.eclipse.p2mvn.cli.Message
+import tech.kinori.eclipse.p2mvn.maven.Mode
 import tech.kinori.eclipse.p2mvn.p2.Repository
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
-const val ANSI_RESET = "\u001B[0m"
-const val ANSI_RED = "\u001B[31m"
-val prompt: String = colorize("?", GREEN_TEXT())
-val warn: String = colorize("!", YELLOW_TEXT())
-val err: String = colorize("X", RED_TEXT())
+val message = Message()
 
 fun main(args: Array<String>) {
     println("\n" +
@@ -26,8 +25,8 @@ fun main(args: Array<String>) {
     println("Welcome to p2 Maven")
     // Get the home dir
     val p2mvnFolder = Paths.get(System.getProperty("user.home"), "p2mvn")
-    var info = colorize(p2mvnFolder.toString(), YELLOW_TEXT())
-    println("Downloaded jars and maven scripts (per group id) will be stored in folder: $info")
+    message.showResult("Downloaded jars and maven scripts (per group id) will be stored in folder", p2mvnFolder.toString())
+    message.showWarn("All the folder contents will be deleted.")
     val line = colorize("-".repeat(100))
     println(line)
     println()
@@ -35,26 +34,25 @@ fun main(args: Array<String>) {
     println()
     println(line)
 
-    askInput("What p2 repository are you exporting to maven?")
+    message.askInput("What p2 repository are you exporting to maven?")
     val p2Url = readLine()
     var mode = Mode.INVALID
-    askInput("Do you want to install local (l) or deploy (d) the p2 jars?", "(L/d)")
+    message.askInput("Do you want to install locally (l) or deploy (d) the p2 jars?", "(L/d)")
     mode = Mode.fromParam(readLine())
     while (mode == Mode.INVALID) {
-        askInput("You must chose install local (l) or deploy (d)", "(L/d)")
+        message.askInput("You must chose install local (l) or deploy (d)", "(L/d)")
         mode = Mode.fromParam(readLine())
     }
     var repoUrl: String? = null
     var repoId: String? = null
     if (mode == Mode.DEPLOY) {
-        askInput("What is the maven repository url (must accept snapshot versions)")
+        message.askInput("What is the maven repository url (must accept snapshot versions)")
         repoUrl = readLine()
-        askInput("What is the maven repository id (as defined in the .m2 settings)")
+        message.askInput("What is the maven repository id (as defined in the .m2 settings)")
         repoId = readLine()
     }
     val client = Dsl.asyncHttpClient()
-
-    var inspector = Inspector(p2Url, p2mvnFolder, repoId, repoUrl, client)
+    var inspector = Inspector(p2Url, client)
     var getInfo = true;
     var download = false;
     var repo: Repository? = null;
@@ -62,55 +60,42 @@ fun main(args: Array<String>) {
         try {
             repo = inspector.analyze()
             if (repo.isComposite) {
-                println(colorize("Found composite p2 repository", CYAN_TEXT()))
-                askInput("${repo.size()} repositories will be processed, continue", "y/N")
+                message.showInfo("Found composite p2 repository")
+                message.askInput("${repo.size()} repositories will be processed, continue", "y/N")
                 var cont = readLine()
                 download =  "y".equals(cont) || "Y".equals(cont)
             } else {
-                println(colorize("Found single p2 repository", CYAN_TEXT()))
+                message.showInfo("Found single p2 repository")
                 download = true;
             }
             getInfo = false
         } catch (e1: IllegalArgumentException) {
             // Check url
-            showError(e1.message);
+            e1.message?.let { message.showError(it) };
             client.close();
             exitProcess(1);
-        } catch (e2: IllegalArgumentException) {
-            showWarn(e2.message);
-            askInput("Unable to connect to repository, try again", "y/N")
+        } catch (e2: P2Exception) {
+            e2.message?.let { message.showWarn(it) };
+            message.askInput("Unable to connect to repository, try again", "y/N")
             var again = readLine()
             getInfo = "y".equals(again) || "Y".equals(again)
         }
     }
     if (repo != null && download) {
-        // For each coordinate, create the folder, pom and download jars
-        Files.createDirectories(p2mvnFolder)
-        showProgress("Downloading p2 repository jars.")
-        repo.process(client, p2mvnFolder, mode, repoId, repoUrl)
+        try {
+            Files.createDirectories(p2mvnFolder)
+            message.showProgress("Downloading p2 repository jars.")
+            repo.process(client, p2mvnFolder, mode, repoId, repoUrl)
+        } catch (e2: P2Exception) {
+            e2.message?.let { message.showError(it) };
+        } catch (e: IOException) {
+            message.showError("Unable to create p2mvn folder in user home; " + e.message)
+        }
     }
     client.close();
-    showProgress("maven scripts created successfully.")
+    message.showInfo("Head to the p2mvn folder and run the generated scripts!")
+    message.showProgress("Finished.")
 }
 
 
-fun askInput(text: String, options: String = "") {
-    val entry = colorize(text, MAGENTA_TEXT())
-    val choices = colorize(options, YELLOW_TEXT())
-    print("$prompt $entry $choices")
-}
 
-fun showProgress(text: String?) {
-    val entry = colorize(text, GREEN_TEXT())
-    println("$entry")
-}
-
-fun showError(text: String?) {
-    val entry = colorize(text, RED_TEXT(), BOLD())
-    println("$err $entry")
-}
-
-fun showWarn(text: String?) {
-    val entry = colorize(text, YELLOW_TEXT(), BOLD())
-    println("$warn $entry")
-}

@@ -1,4 +1,4 @@
-package tech.kinori.eclipse.p2mvn;
+package tech.kinori.eclipse.p2mvn.maven;
 
 import java.util.Objects;
 
@@ -19,8 +19,15 @@ public class MavenCoordinates {
 	 * 2. repoid
 	 * 3. repo url
 	 */
-	public String deployCmd(String packaging) {
+	public String deployCmd(String packaging, boolean batch) {
+		String prefix = "";
+		if (batch) {
+			prefix = "call ";
+		}
 		StringBuilder builder = new StringBuilder();
+		if (batch) {
+			builder.append("call ");
+		}
 		builder.append("mvn deploy:deploy-file -DgroupId=");
 		builder.append(this.groupId);
 		builder.append(" -DartifactId=");
@@ -32,11 +39,15 @@ public class MavenCoordinates {
 		builder.append(" -Dfile=%s");
 		builder.append(" -DrepositoryId=%s");
 		builder.append(" -Durl=%s");
+		builder.append(System.lineSeparator());
 		return builder.toString();
 	}
 
-	public String installCmd(String packaging) {
+	public String installCmd(String packaging, boolean batch) {
 		StringBuilder builder = new StringBuilder();
+		if (batch) {
+			builder.append("call ");
+		}
 		builder.append("mvn install:install-file -DgroupId=");
 		builder.append(this.groupId);
 		builder.append(" -DartifactId=");
@@ -46,7 +57,7 @@ public class MavenCoordinates {
 		builder.append(" -Dpackaging=");
 		builder.append(packaging);
 		builder.append(" -Dfile=%s");
-		//mvn install:install-file -Dfile=<path-to-file> -DgroupId=<group-id> -DartifactId=<artifact-id> -Dversion=<version> -Dpackaging=<packaging>
+		builder.append(System.lineSeparator());
 		return builder.toString();
 	}
 

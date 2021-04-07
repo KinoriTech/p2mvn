@@ -1,4 +1,4 @@
-package tech.kinori.eclipse.p2mvn;
+package tech.kinori.eclipse.p2mvn.maven;
 
 import java.lang.reflect.Field;
 import java.util.Map;
